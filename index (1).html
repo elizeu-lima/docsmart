@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocuSmart Seguros — Análise de Documentos</title>
+<style>
+  :root{
+    --blue:#2563eb;
+    --blue-dark:#1d4ed8;
+    --green:#16a34a;
+    --bg:#f6f7f9;
+    --card:#ffffff;
+    --border:#e5e7eb;
+    --text:#1f2937;
+    --text-muted:#6b7280;
+    --text-faint:#9ca3af;
+    --radius:10px;
+    --shadow: 0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box;min-width:0;}
+  html{overflow-x:hidden;width:100%;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;width:100%;}
+  img,svg{max-width:100%;}
+  a{color:inherit;text-decoration:none;}
+
+  /* Top bar */
+  .topbar{height:6px;background:linear-gradient(90deg,var(--blue),#1e3a8a);}
+
+  .toast{
+    position:fixed;top:14px;right:14px;left:14px;z-index:50;
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:12px 14px;display:flex;gap:10px;align-items:flex-start;
+    font-size:13px;color:var(--text);max-width:380px;
+    animation:slidein .35s ease;
+  }
+  @keyframes slidein{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+  .toast .icon{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:#dbeafe;color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;}
+  .toast .close{margin-left:auto;cursor:pointer;color:var(--text-faint);font-size:16px;line-height:1;background:none;border:none;}
+  @media (min-width:768px){ .toast{left:auto;width:380px;} }
+
+  .page{max-width:1180px;width:100%;margin:0 auto;padding:20px 16px 40px;overflow-x:hidden;}
+  @media (min-width:768px){ .page{padding:28px 32px 48px;} }
+
+  header.hero{margin-bottom:18px;}
+  header.hero h1{font-size:20px;margin:0 0 4px;display:flex;align-items:center;gap:8px;font-weight:700;}
+  header.hero p{margin:0;color:var(--text-muted);font-size:13.5px;}
+
+  .grid{display:grid;gap:16px;grid-template-columns:1fr;width:100%;}
+  @media (min-width:1024px){ .grid{grid-template-columns:1fr 1fr;align-items:start;} }
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:18px;width:100%;overflow:hidden;}
+  .card-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:10px;flex-wrap:wrap;}
+  .card-head .title-row{display:flex;gap:10px;align-items:flex-start;min-width:0;}
+  .card-head .icon-badge{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex:0 0 auto;}
+  .icon-badge.blue{background:#dbeafe;color:var(--blue);}
+  .icon-badge.green{background:#dcfce7;color:var(--green);}
+  .card-head h2{font-size:15px;margin:0;font-weight:700;}
+  .card-head .sub{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .pill{font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap;}
+  .pill.gray{background:#f1f5f9;color:var(--text-muted);}
+  .pill.green{background:#dcfce7;color:#15803d;}
+
+  /* Upload card */
+  .dropzone{
+    border:2px dashed #cbd5e1;border-radius:12px;padding:32px 12px;text-align:center;
+    color:var(--text-muted);cursor:pointer;transition:.15s;background:#fafbfc;width:100%;
+  }
+  .dropzone:hover, .dropzone.dragover{border-color:var(--blue);background:#eff6ff;}
+  .dropzone .upload-icon{font-size:26px;margin-bottom:8px;color:var(--text-faint);}
+  .dropzone strong{display:block;font-size:14.5px;color:var(--text);margin-bottom:4px;white-space:normal;word-break:break-word;}
+  .dropzone .hint{font-size:12.5px;margin-bottom:14px;white-space:normal;word-break:break-word;}
+  .formats{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;max-width:100%;}
+  .formats span{font-size:11.5px;border:1px solid var(--border);border-radius:6px;padding:3px 8px;color:var(--text-muted);background:#fff;white-space:nowrap;}
+  .filename-display{margin-top:12px;font-size:12.5px;color:var(--blue-dark);font-weight:600;display:none;}
+
+  .field-row{display:grid;grid-template-columns:1fr;gap:12px;margin-top:16px;width:100%;}
+  @media (min-width:480px){ .field-row{grid-template-columns:1fr 1fr;} }
+  .field{min-width:0;}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--text-muted);margin-bottom:6px;}
+  .field input{width:100%;max-width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;background:#fff;color:var(--text);}
+  .field input:focus{outline:2px solid #bfdbfe;border-color:var(--blue);}
+
+  .btn{appearance:none;border:none;border-radius:9px;padding:11px 16px;font-size:14px;font-weight:600;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:.15s;}
+  .btn-primary{background:var(--blue);color:#fff;margin-top:16px;}
+  .btn-primary:hover{background:var(--blue-dark);}
+  .btn-primary:disabled{background:#93c5fd;cursor:not-allowed;}
+  .btn-row{display:flex;gap:10px;margin-top:10px;}
+  .btn-secondary{background:#fff;border:1px solid var(--border);color:var(--text);}
+  .btn-secondary:hover{background:#f9fafb;}
+
+  .info-note{display:flex;gap:8px;font-size:12px;color:var(--text-muted);background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-top:14px;line-height:1.5;}
+  .info-note .icon{flex:0 0 auto;color:var(--blue);}
+
+  /* Search & results card */
+  .filters{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:14px;}
+  .filters::-webkit-scrollbar{display:none;}
+  .chip{flex:0 0 auto;border:1px solid var(--border);border-radius:999px;background:#fff;padding:7px 13px;font-size:12.5px;font-weight:600;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap;}
+  .chip.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+  .chip .count{font-size:11px;opacity:.85;}
+
+  .search-row{display:flex;flex-direction:column;gap:10px;margin-bottom:12px;}
+  @media (min-width:560px){ .search-row{flex-direction:row;} }
+  .search-input{position:relative;flex:1;}
+  .search-input input{width:100%;padding:9px 11px 9px 30px;border:1px solid var(--border);border-radius:8px;font-size:13.5px;}
+  .search-input .ic{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-faint);font-size:13px;}
+  .date-fields{display:flex;gap:10px;}
+  .date-fields .field{flex:1;}
+
+  .btn-search-row{display:flex;gap:8px;margin-bottom:18px;}
+  .btn-search{background:var(--blue);color:#fff;flex:1;}
+  .btn-search:hover{background:var(--blue-dark);}
+  .btn-clear{background:#fff;border:1px solid var(--border);color:var(--text-muted);width:44px;flex:0 0 auto;padding:11px 0;}
+
+  .result-list{display:flex;flex-direction:column;gap:10px;}
+  .result-item{border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;transition:.15s;}
+  .result-item:hover{border-color:#bfdbfe;background:#fafcff;}
+  .result-item input[type=checkbox]{margin-top:3px;accent-color:var(--blue);}
+  .result-body{flex:1;min-width:0;}
+  .result-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+  .result-id{font-weight:700;font-size:13.5px;}
+  .tag{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff;white-space:nowrap;}
+  .tag.boletim{background:#1e3a8a;}
+  .tag.declaracao{background:#0e7490;}
+  .tag.notafiscal{background:#15803d;}
+  .tag.laudo{background:#b45309;}
+  .result-date{font-size:11.5px;color:var(--text-faint);margin-left:auto;display:flex;align-items:center;gap:4px;}
+  .result-desc{font-size:12.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .btn-ver{background:var(--blue);color:#fff;font-size:12.5px;padding:7px 14px;border-radius:7px;flex:0 0 auto;border:none;cursor:pointer;font-weight:600;}
+  .btn-ver:hover{background:var(--blue-dark);}
+
+  .select-all-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-muted);margin-top:14px;}
+  .select-all-row input{accent-color:var(--blue);}
+
+  .pagination{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:16px;font-size:13px;color:var(--text-muted);}
+  .pagination button{background:#fff;border:1px solid var(--border);border-radius:7px;width:30px;height:30px;cursor:pointer;}
+  .pagination button:hover{background:#f3f4f6;}
+
+  .empty-state{text-align:center;padding:46px 10px 8px;color:var(--text-faint);}
+  .empty-state .ic{font-size:34px;margin-bottom:10px;}
+  .empty-state strong{display:block;color:var(--text-muted);font-size:14px;margin-bottom:3px;}
+  .empty-state span{font-size:12.5px;}
+
+  footer{text-align:center;font-size:12px;color:var(--text-faint);margin-top:36px;padding:18px 16px;border-top:1px solid var(--border);}
+  footer .links{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin:10px 0;}
+  footer .badges{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px;}
+  footer .badges span{background:#f1f5f9;border-radius:6px;padding:4px 10px;font-size:11px;}
+
+  /* Modal */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:flex-start;justify-content:center;
+    padding:0;z-index:100;overflow-y:auto;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:#fff;width:100%;max-width:480px;border-radius:0;margin-top:0;
+    box-shadow:var(--shadow);min-height:100vh;
+  }
+  @media (min-width:600px){
+    .modal-overlay{padding:40px 20px;align-items:flex-start;}
+    .modal{border-radius:14px;min-height:auto;}
+  }
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
+  .modal-head h3{font-size:16px;margin:0;display:flex;align-items:center;gap:8px;}
+  .modal-head .x{cursor:pointer;border:none;background:none;font-size:18px;color:var(--text-faint);}
+  .modal-body{padding:18px 20px;}
+  .detail-row{display:flex;justify-content:space-between;align-items:flex-start;padding:11px 0;border-bottom:1px solid #f1f5f9;gap:14px;}
+  .detail-row:last-of-type{border-bottom:none;}
+  .detail-label{font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+  .detail-value{font-size:13px;font-weight:600;text-align:right;}
+  .detail-value.tag-wrap{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+  .small-tag{background:#eef2ff;color:#3730a3;font-size:11px;padding:3px 9px;border-radius:999px;font-weight:600;}
+  .summary-box{background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;margin-top:6px;line-height:1.5;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .btn-copy{background:#fff;border:1px solid var(--border);color:var(--text);}
+  .btn-export{background:var(--green);color:#fff;}
+  .btn-close2{background:#fff;border:1px solid var(--border);color:var(--text);}
+  .json-box{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:14px;font-family:ui-monospace,Consolas,Monaco,monospace;font-size:12px;margin-top:16px;overflow-x:auto;line-height:1.7;}
+  .json-box .k{color:#7dd3fc;}
+  .json-box .v{color:#fbbf24;}
+  .json-box .p{color:#94a3b8;}
+
+  .visually-hidden-label{position:absolute;left:-9999px;}
+
+  /* ===== Chat Widget ===== */
+  .chat-fab{
+    position:fixed;bottom:18px;right:18px;width:58px;height:58px;border-radius:50%;
+    background:var(--blue);color:#fff;border:none;cursor:pointer;z-index:200;
+    box-shadow:0 6px 18px rgba(37,99,235,.4);display:flex;align-items:center;justify-content:center;
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .chat-fab:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(37,99,235,.48);}
+  .chat-fab:active{transform:translateY(0) scale(.96);}
+  .chat-fab svg{width:30px;height:30px;display:block;}
+  .chat-fab .icon-close{display:none;}
+  .chat-fab.open .icon-chat{display:none;}
+  .chat-fab.open .icon-close{display:block;}
+  .chat-fab .badge{
+    position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;
+    background:#ef4444;border:2px solid #fff;
+  }
+  .chat-fab.open .badge{display:none;}
+
+  .chat-panel{
+    position:fixed;bottom:88px;right:18px;width:340px;max-width:calc(100vw - 28px);
+    height:480px;max-height:calc(100vh - 120px);background:#fff;border-radius:16px;
+    box-shadow:0 12px 38px rgba(15,23,42,.22);border:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;z-index:199;
+    opacity:0;transform:translateY(16px) scale(.97);pointer-events:none;
+    transition:opacity .18s ease, transform .18s ease;
+  }
+  .chat-panel.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+
+  .chat-header{
+    background:linear-gradient(90deg,var(--blue),#1e3a8a);color:#fff;padding:14px 16px;
+    display:flex;align-items:center;gap:10px;flex:0 0 auto;
+  }
+  .chat-header .avatar{
+    width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);
+    display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+  }
+  .chat-header .avatar svg{width:20px;height:20px;}
+  .chat-header .info{flex:1;min-width:0;}
+  .chat-header .info strong{display:block;font-size:14px;}
+  .chat-header .info span{display:block;font-size:11.5px;opacity:.85;display:flex;align-items:center;gap:5px;}
+  .chat-header .status-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;}
+  .chat-header .chat-close-btn{
+    background:none;border:none;color:#fff;font-size:18px;cursor:pointer;opacity:.85;flex:0 0 auto;
+    width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;
+  }
+  .chat-header .chat-close-btn:hover{background:rgba(255,255,255,.15);opacity:1;}
+
+  .chat-messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#f8fafc;}
+  .msg{max-width:82%;font-size:13px;line-height:1.45;padding:9px 12px;border-radius:12px;}
+  .msg.bot{background:#fff;border:1px solid var(--border);color:var(--text);align-self:flex-start;border-bottom-left-radius:4px;}
+  .msg.user{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+  .msg-time{font-size:10px;color:var(--text-faint);margin-top:3px;}
+
+  .chat-input-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border);background:#fff;flex:0 0 auto;}
+  .chat-input-row input{
+    flex:1;border:1px solid var(--border);border-radius:20px;padding:9px 14px;font-size:13px;outline:none;
+  }
+  .chat-input-row input:focus{border-color:var(--blue);}
+  .chat-send-btn{
+    width:38px;height:38px;border-radius:50%;background:var(--blue);color:#fff;border:none;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+  }
+  .chat-send-btn:hover{background:var(--blue-dark);}
+  .chat-send-btn svg{width:16px;height:16px;}
+
+  @media (max-width:560px){
+    .chat-panel{
+      right:10px;left:10px;width:auto;max-width:none;bottom:84px;
+      height:min(70vh,520px);
+    }
+    .chat-fab{right:14px;bottom:14px;width:54px;height:54px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar"></div>
+
+<div class="toast" id="toast">
+  <div class="icon">✓</div>
+  <div><strong>DocuSmart Seguros</strong> carregado. Faça upload ou busque registros.</div>
+  <button class="close" id="toastClose" aria-label="Fechar aviso">×</button>
+</div>
+
+<div class="page">
+  <header class="hero">
+    <h1>📄 Análise de Documentos</h1>
+    <p>Faça upload do documento de sinistro ou consulte registros existentes</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- Upload Card -->
+    <section class="card" aria-labelledby="uploadTitle">
+      <div class="card-head">
+        <div class="title-row">
+          <div class="icon-badge blue">⬆️</div>
+          <div>
+            <h2 id="uploadTitle">Enviar Documento</h2>
+            <div class="sub">Upload para análise automatizada</div>
+          </div>
+        </div>
+        <span class="pill gray">🔒 Seguro</span>
+      </div>
+
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Selecionar arquivo para upload">
+        <div class="upload-icon">⬆️</div>
+        <strong>Arraste seu arquivo aqui</strong>
+        <div class="hint">ou clique para selecionar</div>
+        <div class="hint" style="margin-bottom:14px;">Suporta PDF, JPG, PNG — até 10 MB</div>
+        <div class="formats">
+          <span>📄 PDF</span><span>🖼️ JPG</span><span>🖼️ PNG</span>
+        </div>
+        <div class="filename-display" id="filenameDisplay"></div>
+      </div>
+      <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none;">
+
+      <div class="field-row">
+        <div class="field">
+          <label for="bucketInput">📁 Bucket S3</label>
+          <input type="text" id="bucketInput" value="docsmart-sinistros">
+        </div>
+        <div class="field">
+          <label for="keyInput">🔑 Chave (opcional)</label>
+          <input type="text" id="keyInput" placeholder="auto: nome do arquivo">
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
+        <label for="endpointInput">📋 FastAPI Endpoint</label>
+        <input type="text" id="endpointInput" value="http://localhost:8000/upload">
+      </div>
+
+      <button class="btn btn-primary" id="analyzeBtn">🪄 Analisar com Strands Agent</button>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="clearBtn">↺ Limpar</button>
+        <button class="btn btn-secondary" id="simulateBtn">👤 Simular</button>
+      </div>
+
+      <div class="info-note">
+        <span class="icon">ℹ️</span>
+        <span>O arquivo é enviado para a FastAPI, que faz upload para S3 e aciona o agente Strands.</span>
+      </div>
+    </section>
+
+    <!-- Search Card -->
+    <section class="card" aria-labelledby="searchTitle">
+      <div class="card-head">
+        <div class="title-row">
+          <div class="icon-badge green">🗄️</div>
+          <div>
+            <h2 id="searchTitle">Consulta e Resultados</h2>
+            <div class="sub">Busque registros ou veja o último resultado</div>
+          </div>
+        </div>
+        <span class="pill green">✓ DynamoDB</span>
+      </div>
+
+      <div class="filters" id="filters">
+        <button class="chip active" data-filter="todos">Todos <span class="count">(25)</span></button>
+        <button class="chip" data-filter="boletim">Boletim <span class="count">4</span></button>
+        <button class="chip" data-filter="laudo">Laudo <span class="count">4</span></button>
+        <button class="chip" data-filter="nota">Nota Fiscal <span class="count">7</span></button>
+        <button class="chip" data-filter="outros">Outros <span class="count">10</span></button>
+      </div>
+
+      <div class="search-row">
+        <div class="search-input">
+          <span class="ic">🔍</span>
+          <input type="text" placeholder="Ex: sin-abc123 ou 'boletim'" id="searchText">
+        </div>
+        <div class="date-fields">
+          <div class="field">
+            <label class="visually-hidden-label" for="dateStart">Data inicial</label>
+            <input type="date" id="dateStart" placeholder="Data inicial">
+          </div>
+          <div class="field">
+            <label class="visually-hidden-label" for="dateEnd">Data final</label>
+            <input type="date" id="dateEnd" placeholder="Data final">
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-search-row">
+        <button class="btn btn-search" id="buscarBtn">🔍 Buscar</button>
+        <button class="btn-clear" id="clearSearchBtn" aria-label="Limpar busca">×</button>
+      </div>
+
+      <div class="result-list" id="resultList">
+        <article class="result-item" data-type="boletim">
+          <input type="checkbox">
+          <div class="result-body">
+            <div class="result-top">
+              <span class="result-id"># sin-0025-ghat</span>
+              <span class="tag boletim">Boletim de Ocorrência</span>
+              <span class="result-date">📅 17/06/2026</span>
+            </div>
+            <div class="result-desc">Serviços prestados no valor de R$ 12.500,00.</div>
+          </div>
+          <button class="btn-ver">👁 Ver</button>
+        </article>
+
+        <article class="result-item" data-type="outros">
+          <input type="checkbox">
+          <div class="result-body">
+            <div class="result-top">
+              <span class="result-id"># sin-0018-iake</span>
+              <span class="tag declaracao">Declaração</span>
+              <span class="result-date">📅 16/06/2026</span>
+            </div>
+            <div class="result-desc">Nota fiscal de aquisição de equipamentos hospitala...</div>
+          </div>
+          <button class="btn-ver">👁 Ver</button>
+        </article>
+
+        <article class="result-item" data-type="nota">
+          <input type="checkbox">
+          <div class="result-body">
+            <div class="result-top">
+              <span class="result-id"># sin-0021-g8rm</span>
+              <span class="tag notafiscal">Nota Fiscal</span>
+              <span class="result-date">📅 16/06/2026</span>
+            </div>
+            <div class="result-desc">Paciente com fratura no braço esquerdo após queda.</div>
+          </div>
+          <button class="btn-ver">👁 Ver</button>
+        </article>
+
+        <article class="result-item" data-type="laudo">
+          <input type="checkbox">
+          <div class="result-body">
+            <div class="result-top">
+              <span class="result-id"># sin-0005-zk1x</span>
+              <span class="tag laudo">Laudo Médico</span>
+              <span class="result-date">📅 14/06/2026</span>
+            </div>
+            <div class="result-desc">Avaliação médica referente ao sinistro registrado.</div>
+          </div>
+          <button class="btn-ver">👁 Ver</button>
+        </article>
+      </div>
+
+      <div class="select-all-row">
+        <input type="checkbox" id="selectAll">
+        <label for="selectAll">Selecionar todos</label>
+      </div>
+
+      <div class="pagination">
+        <button aria-label="Página anterior">‹</button>
+        <span>1 de 5</span>
+        <button aria-label="Próxima página">›</button>
+      </div>
+
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="ic">📭</div>
+        <strong>Nenhuma análise realizada ainda</strong>
+        <span>Faça upload de um documento no painel ao lado para iniciar</span>
+      </div>
+    </section>
+
+  </div>
+
+  <footer>
+    <div>© 2026 DocuSmart Seguros · Todos os direitos reservados</div>
+    <div class="links">
+      <a href="#">🔒 Privacidade</a>
+      <a href="#">📄 Termos</a>
+      <a href="#">❓ Suporte</a>
+    </div>
+    <div class="badges">
+      <span>AWS</span><span>🤖 Strands</span><span>🗄️ DynamoDB</span><span>🧠 Bedrock</span><span>⚡ FastAPI</span>
+    </div>
+  </footer>
+</div>
+
+<!-- Modal: Detalhes do Registro -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>📄 Detalhes do Registro</h3>
+      <button class="x" id="modalClose" aria-label="Fechar">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-row">
+        <div class="detail-label">🏷️ Tipo</div>
+        <div class="detail-value"><span class="small-tag" style="background:#dcfce7;color:#15803d;">Nota Fiscal</span></div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label"># ID</div>
+        <div class="detail-value">sin-0024-r3pv</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">📅 Data do Evento</div>
+        <div class="detail-value">09/06/2026</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">📍 Local</div>
+        <div class="detail-value">Av. Paulista, 1000 - São Paulo/SP</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">💰 Valor Estimado</div>
+        <div class="detail-value">R$ 5.309,21</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">👥 Envolvidos</div>
+        <div class="detail-value tag-wrap">
+          <span class="small-tag">Ana Costa</span>
+          <span class="small-tag">João Silva</span>
+          <span class="small-tag">Camila Nunes</span>
+        </div>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="detail-label" style="margin-bottom:6px;">📝 Resumo</div>
+        <div class="summary-box">Ocorrência registrada na delegacia do bairro.</div>
+      </div>
+      <div class="detail-row" style="margin-top:8px;">
+        <div class="detail-label">🕒 Processado em</div>
+        <div class="detail-value">09/06/2026, 09:33:13</div>
+      </div>
+      <div class="detail-row">
+        <div class="detail-label">📎 Arquivo</div>
+        <div class="detail-value">documento_24.pdf</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-copy" id="copyJsonBtn">📋 Copiar JSON</button>
+        <button class="btn btn-export" id="exportCsvBtn">⬇ Exportar CSV</button>
+      </div>
+      <button class="btn btn-close2" id="modalCloseBtn" style="margin-top:10px;">✕ Fechar</button>
+
+      <div class="json-box" id="jsonBox">
+<span class="p">{</span>
+  <span class="k">"id"</span><span class="p">:</span> <span class="v">"sin-0024-r3pv"</span><span class="p">,</span>
+  <span class="k">"tipo_documento"</span><span class="p">:</span> <span class="v">"Nota Fiscal"</span><span class="p">,</span>
+  <span class="k">"data_evento"</span><span class="p">:</span> <span class="v">"2026-06-09"</span><span class="p">,</span>
+  <span class="k">"local"</span><span class="p">:</span> <span class="v">"Av. Paulista, 1000 - São Paulo/SP"</span><span class="p">,</span>
+  <span class="k">"valor_estimado"</span><span class="p">:</span> <span class="v">5309.21</span><span class="p">,</span>
+  <span class="k">"envolvidos"</span><span class="p">:</span> <span class="p">[</span><span class="v">"Ana Costa"</span><span class="p">, </span><span class="v">"João Silva"</span><span class="p">, </span><span class="v">"Camila Nunes"</span><span class="p">]</span>
+<span class="p">}</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Chat Widget ===== -->
+<button class="chat-fab" id="chatFab" aria-label="Abrir chat de suporte" aria-expanded="false">
+  <svg class="icon-chat" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="32" cy="9" r="4.5" stroke="currentColor" stroke-width="3.4"/>
+    <line x1="32" y1="13.5" x2="32" y2="21" stroke="currentColor" stroke-width="3.4"/>
+    <rect x="13" y="21" width="38" height="30" rx="9" stroke="currentColor" stroke-width="3.4"/>
+    <path d="M9 28v9a3.5 3.5 0 0 0 3.5 3.5H13V28h-4z" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/>
+    <path d="M55 28v9a3.5 3.5 0 0 1-3.5 3.5H51V28h4z" stroke="currentColor" stroke-width="3.2" stroke-linejoin="round"/>
+    <circle cx="24" cy="33" r="2.6" fill="currentColor"/>
+    <circle cx="40" cy="33" r="2.6" fill="currentColor"/>
+    <path d="M27 40c2.2 1.9 7.8 1.9 10 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    <path d="M22 51v6.5l8-6.5" stroke="currentColor" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>
+  <svg class="icon-close" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+  </svg>
+  <span class="badge" id="chatBadge"></span>
+</button>
+
+<section class="chat-panel" id="chatPanel" role="dialog" aria-label="Chat de suporte" aria-hidden="true">
+  <div class="chat-header">
+    <div class="avatar">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="9" r="4.5" stroke="currentColor" stroke-width="3.6"/>
+        <line x1="32" y1="13.5" x2="32" y2="21" stroke="currentColor" stroke-width="3.6"/>
+        <rect x="13" y="21" width="38" height="30" rx="9" stroke="currentColor" stroke-width="3.6"/>
+        <circle cx="24" cy="33" r="2.6" fill="currentColor"/>
+        <circle cx="40" cy="33" r="2.6" fill="currentColor"/>
+        <path d="M27 40c2.2 1.9 7.8 1.9 10 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="info">
+      <strong>Assistente DocuSmart</strong>
+      <span><span class="status-dot"></span> Online agora</span>
+    </div>
+    <button class="chat-close-btn" id="chatPanelClose" aria-label="Fechar chat">×</button>
+  </div>
+
+  <div class="chat-messages" id="chatMessages">
+    <div class="msg bot">
+      Olá! 👋 Sou o assistente do DocuSmart Seguros. Posso ajudar com upload de documentos, status de análises ou dúvidas sobre sinistros.
+      <div class="msg-time">agora</div>
+    </div>
+  </div>
+
+  <div class="chat-input-row">
+    <input type="text" id="chatInput" placeholder="Digite sua mensagem..." aria-label="Mensagem">
+    <button class="chat-send-btn" id="chatSendBtn" aria-label="Enviar mensagem">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 11l18-8-8 18-2-8-8-2z" fill="currentColor"/>
+      </svg>
+    </button>
+  </div>
+</section>
+
+<script>
+  // Toast dismiss
+  const toast = document.getElementById('toast');
+  document.getElementById('toastClose').addEventListener('click', () => toast.remove());
+  setTimeout(() => { if(toast) toast.style.display='none'; }, 6000);
+
+  // Dropzone behavior
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const filenameDisplay = document.getElementById('filenameDisplay');
+
+  function openFilePicker(){ fileInput.click(); }
+  dropzone.addEventListener('click', openFilePicker);
+  dropzone.addEventListener('keypress', e => { if(e.key === 'Enter' || e.key === ' ') openFilePicker(); });
+
+  ['dragover','dragenter'].forEach(evt => dropzone.addEventListener(evt, e => {
+    e.preventDefault(); dropzone.classList.add('dragover');
+  }));
+  ['dragleave','drop'].forEach(evt => dropzone.addEventListener(evt, e => {
+    e.preventDefault(); dropzone.classList.remove('dragover');
+  }));
+  dropzone.addEventListener('drop', e => {
+    const f = e.dataTransfer.files[0];
+    if(f) showFileName(f.name);
+  });
+  fileInput.addEventListener('change', e => {
+    const f = e.target.files[0];
+    if(f) showFileName(f.name);
+  });
+  function showFileName(name){
+    filenameDisplay.textContent = '📎 ' + name;
+    filenameDisplay.style.display = 'block';
+  }
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    fileInput.value = '';
+    filenameDisplay.style.display = 'none';
+    document.getElementById('keyInput').value = '';
+  });
+
+  document.getElementById('analyzeBtn').addEventListener('click', () => {
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Analisando...';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = '🪄 Analisar com Strands Agent';
+    }, 1600);
+  });
+
+  // Filters
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const filter = chip.dataset.filter;
+      document.querySelectorAll('.result-item').forEach(item => {
+        item.style.display = (filter === 'todos' || item.dataset.type === filter) ? 'flex' : 'none';
+      });
+    });
+  });
+
+  // Select all
+  document.getElementById('selectAll').addEventListener('change', e => {
+    document.querySelectorAll('.result-item input[type=checkbox]').forEach(cb => cb.checked = e.target.checked);
+  });
+
+  // Modal
+  const modalOverlay = document.getElementById('modalOverlay');
+  function openModal(){ modalOverlay.classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeModal(){ modalOverlay.classList.remove('open'); document.body.style.overflow=''; }
+
+  document.querySelectorAll('.btn-ver').forEach(btn => btn.addEventListener('click', openModal));
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', e => { if(e.target === modalOverlay) closeModal(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
+
+  document.getElementById('copyJsonBtn').addEventListener('click', () => {
+    const text = document.getElementById('jsonBox').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyJsonBtn');
+      const old = btn.textContent;
+      btn.textContent = '✓ Copiado!';
+      setTimeout(() => btn.textContent = old, 1500);
+    });
+  });
+
+  document.getElementById('exportCsvBtn').addEventListener('click', () => {
+    const csv = 'id,tipo_documento,data_evento,local,valor_estimado\nsin-0024-r3pv,Nota Fiscal,2026-06-09,"Av. Paulista, 1000 - São Paulo/SP",5309.21';
+    const blob = new Blob([csv], {type:'text/csv'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'sin-0024-r3pv.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // ===== Chat Widget =====
+  const chatFab = document.getElementById('chatFab');
+  const chatPanel = document.getElementById('chatPanel');
+  const chatBadge = document.getElementById('chatBadge');
+  const chatMessages = document.getElementById('chatMessages');
+  const chatInput = document.getElementById('chatInput');
+  const chatSendBtn = document.getElementById('chatSendBtn');
+
+  function openChat(){
+    chatPanel.classList.add('open');
+    chatPanel.setAttribute('aria-hidden','false');
+    chatFab.classList.add('open');
+    chatFab.setAttribute('aria-expanded','true');
+    chatBadge.style.display = 'none';
+    setTimeout(() => chatInput.focus(), 150);
+  }
+  function closeChat(){
+    chatPanel.classList.remove('open');
+    chatPanel.setAttribute('aria-hidden','true');
+    chatFab.classList.remove('open');
+    chatFab.setAttribute('aria-expanded','false');
+  }
+  function toggleChat(){
+    chatPanel.classList.contains('open') ? closeChat() : openChat();
+  }
+
+  chatFab.addEventListener('click', toggleChat);
+  document.getElementById('chatPanelClose').addEventListener('click', closeChat);
+
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape' && chatPanel.classList.contains('open')) closeChat();
+  });
+
+  function nowLabel(){
+    const d = new Date();
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+
+  function addMessage(text, from){
+    const div = document.createElement('div');
+    div.className = 'msg ' + from;
+    div.innerHTML = text.replace(/</g,'&lt;') + '<div class="msg-time">' + nowLabel() + '</div>';
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function botReply(userText){
+    const t = userText.toLowerCase();
+    let reply = 'Entendi! Um especialista pode detalhar isso, mas posso te orientar com o que sei sobre o DocuSmart Seguros.';
+    if(t.includes('upload') || t.includes('arquivo') || t.includes('documento')){
+      reply = 'Para enviar um documento, arraste o arquivo na área "Enviar Documento" ou clique para selecionar. Aceitamos PDF, JPG e PNG, até 10 MB.';
+    } else if(t.includes('status') || t.includes('análise') || t.includes('analise')){
+      reply = 'Você pode consultar o status de uma análise pelo ID do sinistro no painel "Consulta e Resultados", à direita.';
+    } else if(t.includes('obrigad')){
+      reply = 'De nada! Estou por aqui se precisar de algo mais. 🙂';
+    }
+    setTimeout(() => addMessage(reply, 'bot'), 600);
+  }
+
+  function sendMessage(){
+    const text = chatInput.value.trim();
+    if(!text) return;
+    addMessage(text, 'user');
+    chatInput.value = '';
+    botReply(text);
+  }
+
+  chatSendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
+
+  // Fecha o chat ao clicar fora do painel/botão, voltando o ícone ao estado inicial
+  document.addEventListener('click', e => {
+    if(!chatPanel.classList.contains('open')) return;
+    const clickedInsidePanel = chatPanel.contains(e.target);
+    const clickedFab = chatFab.contains(e.target);
+    if(!clickedInsidePanel && !clickedFab) closeChat();
+  });
+</script>
+
+</body>
+</html>
